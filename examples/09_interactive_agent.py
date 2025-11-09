@@ -1,13 +1,6 @@
 import asyncio
-import sys
-import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from core._agent import Agent
-from core._model import Memory, get_chater_cfg, ChaterPool
-from core._tools import ToolKit
-from core._utils import FileOperations, DirectoryOperations, SearchOperations
 from datetime import datetime
+from core import Agent, Memory, get_chater_cfg, ChaterPool, ToolKit, FileOperations, DirectoryOperations, SearchOperations
 
 
 async def get_current_time() -> str:
@@ -49,13 +42,11 @@ async def main():
         enable_logging=False
     )
 
-    def response_formatter(self, response):
+    @agent.post_reply
+    def response_formatter(response):
         if response.content and not response.tool_call and not response.tool_calls:
             response.content = f"💬 {response.content}"
         return response
-
-
-    agent.add_post_reply_hook(response_formatter)
 
     print("=" * 60)
     print("Interactive Agent Demo")

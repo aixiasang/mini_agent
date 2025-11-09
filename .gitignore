@@ -50,3 +50,5 @@ data/
 .coverage
 
 /data/
+/cache/
+/agentic_memory_store/

@@ -12,8 +12,6 @@ from ._model import (
     EmbedCfg,
     ChaterCfg,
     EmbedderCfg,
-    get_chater_cfg,
-    get_embedder_cfg,
     Memory,
     TextBlock,
     ImageBlock,
@@ -24,13 +22,15 @@ from ._model import (
     MultimodalContent,
     normalize_content,
     block_to_openai,
+    get_chater_cfg,
+    get_embedder_cfg,
 )
 from ._prompt import PromptTemplate
 from ._tools import ToolKit
 from ._chunk import Chunk, Sentence, Document, BaseTokenizer
 from ._vb import VectorStore, JsonVectorStore, ChromaVectorStore
-from ._utils import FileOperations
-from ._agent import Agent, BaseAgent
+from ._utils import FileOperations,DirectoryOperations,SearchOperations,image_to_base64,video_to_base64
+from ._agent import Agent, BaseAgent,with_reply_hooks,with_observe_hooks
 from ._msghub import MsgHub, msghub
 from ._speaker import Speaker, ConsoleSpeaker, SilentSpeaker
 from ._exceptions import (
@@ -47,10 +47,6 @@ from ._pipeline import (
     parallel_pipeline,
     conditional_pipeline,
     loop_pipeline,
-)
-from ._utils import (
-    image_to_base64,
-    video_to_base64,
 )
 
 __all__ = [
@@ -80,6 +76,8 @@ __all__ = [
     "JsonVectorStore",
     "ChromaVectorStore",
     "FileOperations",
+    "DirectoryOperations",
+    "SearchOperations",
     "get_chater_cfg",
     "get_embedder_cfg",
     "TextBlock",
@@ -109,4 +107,6 @@ __all__ = [
     "MemoryError",
     "ModelError",
     "HookError",
+    "with_reply_hooks",
+    "with_observe_hooks",
 ]

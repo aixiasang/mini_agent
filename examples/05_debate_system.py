@@ -1,17 +1,11 @@
 import asyncio
-import sys
-import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from core._agent import Agent
-from core._model import Memory, get_chater_cfg, ChaterPool, ChatResponse
-from core._msghub import msghub
+from core import Agent, Memory, get_chater_cfg, ChaterPool, ChatResponse, msghub
 
 
 async def main():
     pro = Agent(
         name="Pro",
         chater=ChaterPool([
-            get_chater_cfg("siliconflow"),
             get_chater_cfg("zhipuai")
         ]),
         memory=Memory(),
@@ -21,8 +15,7 @@ async def main():
     con = Agent(
         name="Con",
         chater=ChaterPool([
-            get_chater_cfg("siliconflow"),
-            get_chater_cfg("zhipuai")
+            get_chater_cfg("zhipuai"),
         ]),
         memory=Memory(),
         system_prompt="You argue AGAINST AI regulation. Be persuasive and brief."
@@ -31,7 +24,6 @@ async def main():
     judge = Agent(
         name="Judge",
         chater=ChaterPool([
-            get_chater_cfg("siliconflow"),
             get_chater_cfg("zhipuai")
         ]),
         memory=Memory(),

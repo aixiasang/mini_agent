@@ -1,11 +1,5 @@
 import asyncio
-import sys
-import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from core._agent import Agent
-from core._model import Memory, get_chater_cfg, ChaterPool, ChatResponse
-from core._tools import ToolKit
-from core._utils import FileOperations
+from core import Agent, Memory, get_chater_cfg, ChaterPool, ToolKit, FileOperations
 
 
 async def main():

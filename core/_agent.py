@@ -371,7 +371,7 @@ class Agent(BaseAgent):
                         if first_chunk and (msg.content or msg.reasoning_content):
                             print("Agent: ", end="", flush=True)
                             first_chunk = False
-                        self._output_chunk(msg)
+                        self.speaker.speak_chunk(msg)
                     
                     yield msg
 
@@ -475,12 +475,11 @@ if __name__ == "__main__":
             enable_logging=False
         )
 
-        def format_hook(self, response):
+        @agent.post_reply
+        def format_hook(response):
             if response.content and not response.tool_call and not response.tool_calls:
                 response.content = f"✨ {response.content}"
             return response
-
-        agent.add_post_reply_hook(format_hook)
 
         print(f"Agent: {repr(agent)}")
         print(f"Tools: {list(tools._tools.keys())}")

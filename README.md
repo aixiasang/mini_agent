@@ -1,107 +1,185 @@
-# 轻量化多智能体框架
+# Mini-Agent: 轻量化智能体框架
 
-> 受 [AgentScope](https://github.com/modelscope/agentscope) 启发的极简智能体框架，专注于性能和可扩展性
+> 受 [AgentScope](https://github.com/modelscope/agentscope) 启发的极简智能体框架  
+> 集成 ReAct、增强推理、A-MEM 记忆系统等先进技术
+
+[![Python Version](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/downloads/)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Code Style](https://img.shields.io/badge/code%20style-minimal-black.svg)](https://github.com/psf/black)
+
+## ✨ 核心特性
+
+- 🎯 **极简设计** - 无冗余注释，清晰命名，核心代码仅 12 个模块
+- ⚡ **异步优先** - 全异步 I/O，并发工具调用，流式输出
+- 🔄 **自动容错** - ChaterPool/EmbedderPool 自动故障转移
+- 🎨 **策略模式** - Speaker 输出策略，Hook 装饰器系统
+- 🛠️ **MCP 集成** - 原生支持 Model Context Protocol
+- 🧠 **A-MEM 记忆** - 基于论文 [arXiv:2502.12110](https://arxiv.org/abs/2502.12110) 的自进化记忆系统
+- 🤖 **ReAct 框架** - 完整的推理-行动循环
+- 🌐 **多模态** - 图片、音频、视频内容支持
+- 📊 **向量检索** - 内置 ChromaDB/JSON 向量存储
+
+
+## 🚀 快速开始 Quick Start
+
+安装后，您可以直接导入模块，无需相对路径导入：
+
+```python
+# 导入核心模块
+from core import Agent, Memory, ChaterPool, get_chater_cfg, ToolKit
+
+# 导入 Prompt 模板
+from prompt import REACT_PROMPTS, build_classic_react_system_prompt
+
+# 创建智能体
+agent = Agent(
+    name="MyAgent",
+    chater=ChaterPool([get_chater_cfg("siliconflow")]),
+    memory=Memory(max_messages=20),
+    system_prompt="You are a helpful assistant."
+)
+
+# 使用智能体
+async for response in agent.reply("Hello!"):
+    print(response.content)
+```
 
 ## 📐 系统架构
 
+### 核心架构层次
+
 ```mermaid
 graph TB
-    subgraph "核心层 Core Layer"
-        Agent[Agent 智能体]
-        BaseAgent[BaseAgent 基类]
-        Speaker[Speaker 输出策略]
-        Memory[Memory 记忆]
-        
-        Agent --> BaseAgent
-        Agent --> Speaker
-        Agent --> Memory
+    subgraph "应用层 Application"
+        ReActAgent[ReActAgent<br/>ReAct推理]
+        PlanReAct[PlanReActAgent<br/>计划-执行]
+        Reflection[ReflectionAgent<br/>反思优化]
+        SelfConsist[SelfConsistencyAgent<br/>自洽性验证]
+        AgenticMem[AgenticMemoryAgent<br/>A-MEM记忆系统]
     end
     
-    subgraph "模型层 Model Layer"
-        Chater[Chater 对话模型]
-        ChaterPool[ChaterPool 模型池]
-        Embedder[Embedder 嵌入模型]
-        ChatResponse[ChatResponse 响应]
+    subgraph "核心层 Core"
+        direction TB
+        Agent[Agent 基础智能体]
+        BaseAgent[BaseAgent 抽象基类]
         
-        ChaterPool --> Chater
-        Chater --> ChatResponse
+        Agent -->|继承| BaseAgent
     end
     
-    subgraph "工具层 Tool Layer"
+    subgraph "模型层 Model"
+        direction LR
+        ChaterPool[ChaterPool<br/>故障转移池]
+        Chater1[Chater 1]
+        Chater2[Chater 2]
+        ChaterN[Chater N]
+        
+        EmbedderPool[EmbedderPool<br/>嵌入模型池]
+        Embedder1[Embedder 1]
+        Embedder2[Embedder 2]
+        
+        ChaterPool -->|自动切换| Chater1
+        ChaterPool -->|失败重试| Chater2
+        ChaterPool -.->|备用| ChaterN
+        
+        EmbedderPool --> Embedder1
+        EmbedderPool --> Embedder2
+    end
+    
+    subgraph "工具层 Tools"
         ToolKit[ToolKit 工具箱]
-        MCPClient[MCP客户端]
-        ToolCall[ToolCall 工具调用]
+        NativeTools[原生Python函数]
+        MCPTools[MCP Protocol工具]
         
-        ToolKit --> MCPClient
-        ToolKit --> ToolCall
+        ToolKit --> NativeTools
+        ToolKit --> MCPTools
     end
     
-    subgraph "通信层 Communication Layer"
-        MsgHub[MsgHub 消息中心]
-        Pipeline[Pipeline 流水线]
-    end
-    
-    subgraph "存储层 Storage Layer"
-        VectorStore[VectorStore 向量存储]
-        JsonVectorStore[JsonVectorStore]
-        ChromaVectorStore[ChromaVectorStore]
+    subgraph "存储层 Storage"
+        Memory[Memory<br/>对话记忆]
+        VectorStore[VectorStore<br/>向量检索]
+        ChromaDB[ChromaDB]
+        JsonStore[JsonVectorStore]
         
-        VectorStore --> JsonVectorStore
-        VectorStore --> ChromaVectorStore
+        VectorStore --> ChromaDB
+        VectorStore --> JsonStore
     end
     
-    subgraph "工具层 Utilities"
-        Chunk[Chunk 文本块]
-        PromptTemplate[PromptTemplate 提示词]
-        FileOps[FileOperations 文件操作]
+    subgraph "通信层 Communication"
+        MsgHub[MsgHub<br/>消息广播中心]
+        SeqPipe[Sequential<br/>串行流水线]
+        ParaPipe[Parallel<br/>并行流水线]
+        CondPipe[Conditional<br/>条件流水线]
+        LoopPipe[Loop<br/>循环流水线]
     end
+    
+    subgraph "输出层 Output"
+        Speaker[Speaker 抽象]
+        Console[ConsoleSpeaker]
+        Silent[SilentSpeaker]
+        Custom[CustomSpeaker]
+        
+        Speaker --> Console
+        Speaker --> Silent
+        Speaker --> Custom
+    end
+    
+    subgraph "Hook系统 AOP"
+        PreReply[pre_reply]
+        PostReply[post_reply]
+        PreObserve[pre_observe]
+        PostObserve[post_observe]
+    end
+    
+    ReActAgent -->|继承| Agent
+    PlanReAct -->|继承| Agent
+    Reflection -->|继承| Agent
+    SelfConsist -->|继承| Agent
+    AgenticMem -->|继承| Agent
     
     Agent --> ChaterPool
+    Agent --> Memory
     Agent --> ToolKit
-    Agent --> MsgHub
-    Agent --> Pipeline
+    Agent --> Speaker
     
-    ToolKit -.使用.-> FileOps
-    Agent -.检索.-> VectorStore
+    AgenticMem --> EmbedderPool
+    AgenticMem --> VectorStore
+    
+    Agent -.装饰.-> PreReply
+    Agent -.装饰.-> PostReply
+    Agent -.装饰.-> PreObserve
+    Agent -.装饰.-> PostObserve
+    
+    MsgHub -.广播.-> Agent
+    SeqPipe -.编排.-> Agent
+    ParaPipe -.编排.-> Agent
+    CondPipe -.编排.-> Agent
+    LoopPipe -.编排.-> Agent
+    
+    style AgenticMem fill:#ff9999
+    style ChaterPool fill:#99ccff
+    style MsgHub fill:#99ff99
+    style VectorStore fill:#ffcc99
 ```
 
-## 🏗️ 数据流架构
+## 🔄 Agent 执行流程
 
-```mermaid
-sequenceDiagram
-    participant User
-    participant Agent
-    participant Hook
-    participant Speaker
-    participant ChaterPool
-    participant Memory
-    participant ToolKit
-    
-    User->>Agent: reply("message")
-    Agent->>Hook: pre_reply hooks
-    Hook-->>Agent: modified message
-    
-    Agent->>Memory: add user message
-    
-    loop Max Iterations
-        Agent->>ChaterPool: chat(messages)
-        ChaterPool-->>Agent: ChatResponse
-        
-        alt Has Tool Calls
-            Agent->>ToolKit: execute tools
-            ToolKit-->>Agent: tool results
-            Agent->>Memory: add tool results
-        else No Tools
-            Agent->>Hook: post_reply hooks
-            Hook-->>Agent: modified response
-            Agent->>Speaker: speak(response)
-            Speaker-->>User: formatted output
-        end
-    end
-    
-    Agent->>Memory: add final response
-    Agent-->>User: return response
-```
+**核心执行步骤：**
+
+1. **接收输入** → pre_reply hooks 预处理
+2. **存入记忆** → Memory 添加用户消息  
+3. **ReAct 循环**（最多 max_iterations 次）：
+   - 构建对话历史
+   - ChaterPool 调用 LLM（自动故障转移）
+   - **如有工具调用**：并发执行工具 → 存储结果 → 继续循环
+   - **如是最终答案**：post_reply hooks → Speaker 输出 → 结束
+4. **返回响应** → 异步生成器或完整响应
+
+**AgenticMemoryAgent 额外流程：**
+- 向量检索相似记忆
+- LLM 分析决策是否进化
+- 更新记忆连接和标签
+- 存储新的向量嵌入
+
 
 ## 🎯 核心组件详解
 
@@ -120,358 +198,113 @@ def postprocess(response):
     return response
 ```
 
-**Hook 执行流程：**
-```mermaid
-graph LR
-    A[Input] --> B[Object Pre Hooks]
-    B --> C[Class Pre Hooks]
-    C --> D[Original Method]
-    D --> E[Object Post Hooks]
-    E --> F[Class Post Hooks]
-    F --> G[Output]
-```
-
 **Hook 类型：**
-- `pre_reply` / `post_reply` - 拦截回复
-- `pre_observe` / `post_observe` - 拦截观察
-- `pre_speak` / `post_speak` - 拦截输出
+- `@agent.pre_reply` / `@agent.post_reply` - 拦截回复，修改输入/输出
+- `@agent.pre_observe` / `@agent.post_observe` - 拦截观察，增强记忆
+- `@agent.pre_speak` / `@agent.post_speak` - 拦截输出，自定义格式
+- `@BaseAgent.pre_reply` - 类级别 Hook，影响所有 Agent 实例
 
-#### Speaker 策略模式
+**Speaker 策略：** ConsoleSpeaker/SilentSpeaker，自定义输出格式
 
-```python
-class CustomSpeaker(Speaker):
-    def speak_stream_start(self, agent_name: str):
-        print(f"🤖 {agent_name}: ", end="", flush=True)
-    
-    def speak_chunk(self, chunk: ChatResponse):
-        print(chunk.content, end="", flush=True)
-    
-    def speak_stream_end(self):
-        print(" ✨")
-    
-    def speak_complete(self, response: ChatResponse, agent_name: str):
-        print(f"🤖 {agent_name}: {response.content}")
-```
+### 2. 模型层
 
-### 2. 模型层架构
+**ChaterPool 自动故障转移：** 主模型失败自动切换备用，实现断路器模式
 
-#### ChaterPool 自动故障转移
-
-```python
-pool = ChaterPool([
-    get_chater_cfg("siliconflow"),
-    get_chater_cfg("zhipuai"),
-    get_chater_cfg("openai")
-])
-```
-
-**工作原理：**
-```mermaid
-graph TD
-    Request[请求] --> Try1[尝试模型1]
-    Try1 -->|失败| Try2[尝试模型2]
-    Try1 -->|成功| Return[返回]
-    Try2 -->|失败| Try3[尝试模型3]
-    Try2 -->|成功| Return
-    Try3 -->|失败| Error[抛出异常]
-    Try3 -->|成功| Return
-```
-
-#### 多模态内容支持
-
-```python
-content = MultimodalContent()
-content.add_text("Describe this image:")
-content.add_image(url="https://example.com/image.jpg")
-content.add_audio(base64="...")
-```
+**多模态支持：** 图片、音频、视频内容（base64/URL）
 
 ### 3. 工具系统
 
-#### 原生函数注册
+**ToolKit：** 注册 Python 函数或 MCP 协议工具
 
-```python
-toolkit = ToolKit()
-
-async def get_weather(city: str) -> str:
-    return f"{city} is sunny"
-
-toolkit.register(get_weather, "get_weather")
-```
-
-#### MCP (Model Context Protocol) 集成
-
-```python
-from core._tools import MCPServerConfig
-
-mcp_config = MCPServerConfig(
-    name="filesystem",
-    command="npx",
-    args=["-y", "@modelcontextprotocol/server-filesystem", "/path/to/dir"]
-)
-
-toolkit.add_mcp_server(mcp_config)
-await toolkit.connect_mcp_servers()
-```
-
-**工具执行流程：**
-```mermaid
-graph TD
-    A[Tool Call] --> B{Tool Type}
-    B -->|Native| C[Execute Python Function]
-    B -->|MCP| D[Call MCP Server]
-    C --> E[Format Result]
-    D --> E
-    E --> F[Return ChatResponse]
-```
+**特性：** 并发执行、超时控制、错误隔离、MCP 集成
 
 ### 4. 通信与编排
 
-#### MsgHub 消息中心
+**MsgHub：** 多智能体自动广播通信
+
+**Pipeline：** 4 种模式 - Sequential/Parallel/Conditional/Loop
+
+### 5. A-MEM 自进化记忆系统
+
+**论文参考:** [A-MEM: Agentic Memory for LLM Agents (arXiv:2502.12110)](https://arxiv.org/abs/2502.12110)
+
+智能体驱动的记忆系统，具有自主分析、组织和进化能力：
 
 ```python
-with msghub([agent1, agent2, agent3]):
-    agent1.reply("Hello")
-```
+from agent import AgenticMemoryAgent
 
-**广播机制：**
-```mermaid
-graph TD
-    A[Agent1 reply] --> H[MsgHub]
-    H --> B[Agent2 observe]
-    H --> C[Agent3 observe]
-```
-
-#### Pipeline 流水线
-
-**串行流水线：**
-```python
-result = await sequential_pipeline([agent1, agent2, agent3], initial_message)
-```
-
-**并行流水线：**
-```python
-results = await parallel_pipeline([agent1, agent2, agent3], message)
-```
-
-**条件流水线：**
-```python
-result = await conditional_pipeline(
-    condition=lambda msg: "urgent" in msg.content,
-    true_agent=urgent_handler,
-    false_agent=normal_handler,
-    message=message
-)
-```
-
-**循环流水线：**
-```python
-result = await loop_pipeline(
-    agents=[analyzer, refiner],
-    initial_message=message,
-    max_iterations=5,
-    stop_condition=lambda msg: "DONE" in msg.content
-)
-```
-
-### 5. 向量存储与检索
-
-```python
-from core import JsonVectorStore, Embedder
-
-store = JsonVectorStore(persist_path="./vectors")
-embedder = Embedder(...)
-
-embeddings = await embedder.embed(["text1", "text2"])
-await store.add(
-    ids=["id1", "id2"],
-    texts=["text1", "text2"],
-    embeddings=embeddings
-)
-
-query_emb = await embedder.embed(["query"])
-results = await store.search(query_emb[0], k=5)
-```
-
-### 6. 提示词模板
-
-```python
-from core import PromptTemplate
-
-template = PromptTemplate("Hello {name}, you are {age} years old")
-
-result = template.format(name="Alice", age=25)
-print(result.totext())
-
-prompt1 = PromptTemplate("Task: {task}")
-prompt2 = PromptTemplate("Context: {context}")
-combined = prompt1 + prompt2
-```
-
-## 🚀 快速开始
-
-### 基础智能体
-
-```python
-import asyncio
-from core import Agent, ChaterPool, Memory, get_chater_cfg
-
-async def main():
-    agent = Agent(
-        name="Assistant",
-        chater=ChaterPool([get_chater_cfg("siliconflow")]),
-        memory=Memory(),
-        system_prompt="You are a helpful assistant."
-    )
-    
-    async for response in agent.reply("Hello!", stream=True):
-        agent.speak(response, stream=True)
-
-asyncio.run(main())
-```
-
-### 带工具的智能体
-
-```python
-from core import ToolKit
-from datetime import datetime
-
-async def get_time() -> str:
-    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-toolkit = ToolKit()
-toolkit.register(get_time, "get_time")
-
-agent = Agent(
-    name="TimeAgent",
-    chater=ChaterPool([get_chater_cfg("siliconflow")]),
+agent = AgenticMemoryAgent(
+    name="MemoryAgent",
+    chater=ChaterPool([get_chater_cfg("zhipuai")]),
+    embedder=EmbedderPool([get_embedder_cfg("zhipuai")]),
     memory=Memory(),
-    tools=toolkit
+    evo_threshold=100  # 每100次交互触发进化
 )
 
-async for response in agent.reply("What time is it?"):
-    print(response.content)
+await agent.add_memory("Python是一门高效的编程语言")
+results = await agent.retrieve_memories("编程语言", k=5)
 ```
 
-### 多智能体协作
+**核心特性：**
+- LLM 自动提取 keywords、context、tags
+- 基于语义相似性建立记忆图结构
+- 记忆节点自主进化和更新
+- 多维混合检索（内容+关键词+标签）
 
-```python
-from core import msghub
-
-agent1 = Agent(name="Analyzer", ...)
-agent2 = Agent(name="Executor", ...)
-agent3 = Agent(name="Reviewer", ...)
-
-with msghub([agent1, agent2, agent3]):
-    async for r in agent1.reply("Analyze this task"):
-        agent1.speak(r)
-    
-    async for r in agent2.reply("Execute the plan"):
-        agent2.speak(r)
-```
-
-## 📦 完整示例
-
-查看 `examples/` 目录：
-
-- `01_single_agent_with_tools.py` - 基础智能体与工具调用
-- `02_hooks_demo.py` - Hook 装饰器演示
-- `03_multi_agent_msghub.py` - 多智能体通信
-- `07_decorator_hooks_final.py` - 完整 Hook 系统
-- `08_custom_speaker.py` - 自定义 Speaker 实现
 
 ## 🎨 设计模式
 
-### 策略模式 (Speaker)
+- **策略模式** (Speaker): 输出格式化独立可替换
+- **装饰器模式** (Hooks): AOP 实现，无需元类
+- **池化模式** (ChaterPool): 自动故障转移
+- **观察者模式** (MsgHub): 多智能体广播
 
-输出格式化逻辑独立，易于替换和测试。
 
-### 装饰器模式 (Hooks)
+## ⚡ 性能特性与优化
 
-无需元类，使用装饰器实现 AOP，性能更好。
+### 异步优先设计
+- **全异步 I/O**：所有 LLM 调用、工具执行、向量检索均为异步
+- **并发工具调用**：使用 `asyncio.gather` 并行执行多个工具
+- **流式输出**：支持 SSE 流式响应，实时显示生成内容
+- **非阻塞**：Speaker 和 Hook 系统不阻塞主流程
 
-### 池化模式 (ChaterPool, EmbedderPool)
+### 容错与可靠性
+- **ChaterPool 故障转移**：主模型失败自动切换备用模型
+- **断路器模式**：记录失败次数，暂时跳过故障模型
+- **重试机制**：Tenacity 库实现指数退避重试
+- **错误隔离**：工具执行失败返回错误信息而非崩溃
 
-自动故障转移，提高系统可靠性。
+### 内存与存储
+- **轻量级 Memory**：仅保留最近 N 条消息
+- **向量存储缓存**：ChromaDB 持久化，避免重复嵌入
+- **懒加载**：MCP 服务器按需连接
+- **流式处理**：大文件分块读取，不全量加载
 
-### 观察者模式 (MsgHub)
-
-多智能体自动广播通信。
-
-## ⚙️ 配置
-
-```bash
-export SILICONFLOW_API_KEY="your-key"
-export ZHIPUAI_API_KEY="your-key"
-export OPENAI_API_KEY="your-key"
-```
-
-## 🔧 核心模块详解
-
-| 模块 | 功能 | 文件大小 |
-|------|------|---------|
-| `_agent.py` | 智能体核心，Hook系统 | 19KB |
-| `_model.py` | 模型封装，响应结构 | 38KB |
-| `_tools.py` | 工具系统，MCP集成 | 25KB |
-| `_speaker.py` | 输出策略 | 1.6KB |
-| `_msghub.py` | 消息中心 | 2KB |
-| `_pipeline.py` | 流水线编排 | 3KB |
-| `_prompt.py` | 提示词模板 | 6KB |
-| `_chunk.py` | 文本分块 | 33KB |
-| `_vb.py` | 向量存储 | 19KB |
-| `_utils.py` | 工具函数 | 44KB |
-| `_exceptions.py` | 异常定义 | 1.5KB |
-
-## 📊 性能特性
-
-- ✅ **异步优先** - 全异步 I/O，高并发
-- ✅ **并发工具调用** - `asyncio.gather` 并行执行
-- ✅ **流式输出** - 支持 SSE 流式响应
-- ✅ **内存高效** - 轻量级数据结构
-- ✅ **可扩展** - 清晰的抽象层次
-
-## 🔄 与 AgentScope 的差异
-
-| 特性 | AgentScope | 本框架 |
-|------|-----------|--------|
-| Hook 实现 | Metaclass | Decorator |
-| 输出格式化 | 内置 print | Speaker 策略 |
-| 工具系统 | 基础实现 | MCP 协议集成 |
-| 流水线 | 无内置 | 4种模式 |
-| 向量存储 | 无 | 内置支持 |
-| 代码风格 | 功能完整 | 极简轻量 |
+### 代码优化
+- **无冗余注释**：清晰命名代替注释，减少维护成本
+- **模块化设计**：单一职责，易于测试和替换
+- **类型提示**：全面使用 Python 类型提示
+- **极简原则**：核心代码仅 12 个模块，总计约 6000 行
 
 ## 🎯 设计原则
 
-1. **单一职责** - 每个模块功能独立
-2. **开闭原则** - 通过继承扩展，不修改核心
-3. **依赖倒置** - 依赖抽象接口
-4. **组合优于继承** - Speaker/ToolKit 可组合
-5. **极简主义** - 只保留核心功能
+**单一职责** · **开闭原则** · **依赖倒置** · **组合优于继承** · **极简主义**
 
 ## 🙏 致谢
 
-本项目深受阿里巴巴 ModelScope 团队开发的 [AgentScope](https://github.com/modelscope/agentscope) 启发。
-
-采用的设计模式：
-- Hook 系统架构（装饰器重新实现）
-- 消息中心概念
-- 智能体基类结构
-- 工具集成模式
-
-优化方向：
-- 降低复杂度（装饰器 vs 元类）
-- 提升性能（异步优先）
-- 简化定制（策略模式）
-- 精简代码（极简主义）
+受 [AgentScope](https://github.com/modelscope/agentscope) 启发，采用装饰器 Hook、消息中心等设计，优化为异步优先、极简轻量。
 
 ## 📄 许可证
 
 MIT License
 
-## 🤝 贡献
+## 🤝 贡献指南
 
-欢迎贡献！请遵循：
-- 代码无注释（清晰命名）
-- 极简设计原则
-- 为新功能添加示例
+欢迎贡献代码、报告问题或提出建议！
+
+### 开发规范
+1. **无注释原则**：使用清晰的命名代替注释，代码即文档
+2. **极简主义**：保持核心功能简洁，避免过度设计
+3. **类型提示**：所有公共 API 必须包含类型提示
+4. **异步优先**：新功能优先使用异步实现
+5. **示例驱动**：为新功能添加独立可运行的示例

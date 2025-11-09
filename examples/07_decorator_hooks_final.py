@@ -1,10 +1,5 @@
 import asyncio
-import sys
-import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from core._agent import Agent, BaseAgent
-from core._model import ChaterPool, Memory, get_chater_cfg
+from core import Agent, BaseAgent, ChaterPool, Memory, get_chater_cfg
 
 
 async def main():
@@ -12,7 +7,7 @@ async def main():
     
     agent = Agent(
         name="Assistant",
-        chater=ChaterPool([get_chater_cfg("siliconflow")]),
+        chater=ChaterPool([get_chater_cfg("zhipuai")]),
         memory=Memory(),
         system_prompt="You are a helpful assistant. Keep responses very brief."
     )

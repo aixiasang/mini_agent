@@ -1,23 +1,18 @@
 import asyncio
-import sys
-import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from core._agent import Agent
-from core._model import Memory, get_chater_cfg, ChaterPool
+from core import Agent, BaseAgent, Memory, get_chater_cfg, ChaterPool
 
 
 async def main():
+    @BaseAgent.pre_reply
     def global_logger(agent, message):
         print(f"[GLOBAL] {agent.name} received: {message[:40]}...")
         return message
 
+    @BaseAgent.post_reply
     def global_formatter(agent, response):
         if response.content:
             response.content = f"🤖 {response.content}"
         return response
-
-    Agent.register_class_hook("pre_reply", "logger", global_logger)
-    Agent.register_class_hook("post_reply", "formatter", global_formatter)
 
     print("Class-level hooks affect ALL agents\n")
     print("=" * 60)
@@ -25,7 +20,6 @@ async def main():
     agent1 = Agent(
         name="Agent1",
         chater=ChaterPool([
-            get_chater_cfg("siliconflow"),
             get_chater_cfg("zhipuai")
         ]),
         memory=Memory(),
@@ -35,7 +29,6 @@ async def main():
     agent2 = Agent(
         name="Agent2",
         chater=ChaterPool([
-            get_chater_cfg("siliconflow"),
             get_chater_cfg("zhipuai")
         ]),
         memory=Memory(),
@@ -48,7 +41,8 @@ async def main():
             agent.speak(response)
         print()
 
-    Agent.clear_class_hooks()
+    BaseAgent._class_hooks_pre_reply.clear()
+    BaseAgent._class_hooks_post_reply.clear()
     print("\n" + "=" * 60)
     print("Class hooks cleared")
 

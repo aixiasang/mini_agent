@@ -1,28 +1,30 @@
 import asyncio
-import sys
 import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from core._agent import Agent
-from core._model import Memory, get_chater_cfg, ChaterPool, ChatResponse, ImageBlock, MultimodalContent
-from core._utils import image_to_base64
+from core import Agent, Memory, ChatResponse, MultimodalContent, Chater, ChaterCfg, ClientCfg, ChatCfg, image_to_base64
 
 
 async def main():
+    vision_cfg = ChaterCfg(
+        client_cfg=ClientCfg(
+            api_key=os.getenv("ali_api_key"),
+            base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+        ),
+        chat_cfg=ChatCfg(model="qwen3-vl-plus")
+    )
+    
     agent = Agent(
         name="VisionAgent",
-        chater=ChaterPool([
-            get_chater_cfg("siliconflow"),
-            get_chater_cfg("zhipuai")
-        ]),
+        chater=Chater(vision_cfg),
         memory=Memory(),
         system_prompt="You are a vision AI that describes images in detail."
     )
 
-    image_path = "../data/ikun1.png"
+    image_path = os.path.join(os.path.dirname(__file__), "../data/ikun1.png")
+    image_base64 = image_to_base64(image_path)
     
     content = MultimodalContent()
-    content.add_text("What do you see in this image?")
-    content.add_image(url=f"file://{image_path}")
+    content.add_text("Please describe the image.")
+    content.add_image(base64=image_base64)
 
     user_msg = ChatResponse(
         role="user",
