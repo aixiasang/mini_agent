@@ -52,3 +52,8 @@ data/
 /data/
 /cache/
 /agentic_memory_store/
+/ark/
+/live2d/
+/test_outputs/
+/tts/test_outputs/
+/tts/tts_cache/
